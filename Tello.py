@@ -1,7 +1,44 @@
 import socket, threading
 
 
+PITCH = 0
+ROLL = 1
+YAW = 2
+
+
+class Server:
+    """
+    Receiving Tello's state
+    """
+    def __init__(self):
+        self.local_ip = '0.0.0.0'
+        self.local_port = 8890
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind((self.local_ip, self.local_port))
+        self._receive_thread = threading.Thread(target=self.receive_thread)
+        self._receive_thread.daemon = True
+        self._receive_thread.start()
+        self.data = None
+
+    def parse(self):
+        if self.data:
+            params = [(p.split(':')) for p in self.data[:-1:].split(';')]
+            return params
+        return None
+
+    def receive_thread(self):
+        while True:
+            try:
+                self.data, ip = self.socket.recvfrom(4096)
+                self.data = self.data.decode()
+            except socket.error as exc:
+                print("Caught exception socket.error : %s" % exc)
+
+
 class Tello:
+    """
+    Sending and receiving basic commands and data.
+    """
     def __init__(self):
         self.local_ip = ''
         self.local_port = 8889
@@ -53,7 +90,7 @@ class Tello:
         return self.move('right', distance)
 
     def set_speed(self, speed):
-        speed = int(round(float(speed) * 27.7778))
+        speed = int(round(float(speed)))
         return self.send_command('speed %s' % speed)
 
     def get_battery(self):
@@ -84,7 +121,7 @@ class Tello:
         while True:
             try:
                 self.response, ip = self.socket.recvfrom(4096)
-                print(self.response)
+                #print(self.response)
             except socket.error as exc:
                 print("Caught exception socket.error : %s" % exc)
 
